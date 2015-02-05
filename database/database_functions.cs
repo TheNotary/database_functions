@@ -13,7 +13,9 @@ namespace database
 {
     public class database_functions
     {
-        string pstrDB = @"c:\test.mdb";           // string pointing to database location
+        //string pstrDB = @"c:\test.mdb";           // string pointing to database location
+
+        public static string pstrDB = @"c:\test.mdb";           // string pointing to database location
 
         private static void CreateAllTables()
         {
@@ -293,7 +295,7 @@ namespace database
         /// <param name="tableName"></param>
         /// <param name="columnNames"></param>
         /// <param name="colTypes"></param>
-        private static void UploadToDbsClean(DataSet mydataset, string tableName, string pstrDB)
+        public static void UploadToDbsClean(DataSet mydataset, string tableName, string pstrDB)
         {
             DataColumnCollection columns = mydataset.Tables[tableName].Columns;
 
@@ -882,7 +884,7 @@ namespace database
         /// <param name="pstrDB">DATABASE</param>
         /// <param name="tableName">TABLE</param>
         /// <param name="mydataset">DATASET</param>
-        public DataSet FillDataSet(string tableName, string pstrDB)
+        public static DataSet FillDataSet(string tableName, string pstrDB)
         {
             DataSet returnset = new DataSet();
             String svlQuery = "select * from " + tableName;
@@ -909,7 +911,7 @@ namespace database
         /// </summary>
         /// <param name="tblName"></param>
         /// <returns></returns>
-        private DataSet FillNewDataSet(string tblName, string colName, string pstrDB)
+        private static DataSet FillNewDataSet(string tblName, string colName, string pstrDB)
         {
             DataSet returnDataset = new DataSet();
             String svlQuery = "select " + colName + " from " + tblName;           // FIXME  I changed where the SaleDate to an astrik
@@ -960,7 +962,7 @@ namespace database
 
 
 
-        private void deleteTable(string tblNamez)
+        public static void deleteTable(string tblNamez, string pstrDB)
         {
             String svlQuery = "DELETE FROM " + tblNamez;
 
@@ -983,6 +985,8 @@ namespace database
             }
         }
 
+        
+
 
 
 
@@ -993,7 +997,7 @@ namespace database
         /// <param name="pstrDB">DATABASE</param>
         /// <param name="tableName">TABLE</param>
         /// <param name="mydataset">DATASET</param>
-        public DataSet RunQuery(string svl, string returnTableName)
+        public static DataSet RunQuery(string svl, string returnTableName)
         {
             String svlQuery = svl;
             DataSet returnSet = new DataSet();
@@ -1010,7 +1014,7 @@ namespace database
         }
 
 
-        public void RunNonQuerry(string svlQuery)
+        public static void RunNonQuerry(string svlQuery)
         {
             System.Data.OleDb.OleDbCommand cmd = new System.Data.OleDb.OleDbCommand(svlQuery,
                 new System.Data.OleDb.OleDbConnection("Provider=Microsoft.Jet.OLEDB.4.0;Data Source = " + pstrDB + ";"));
@@ -1031,7 +1035,7 @@ namespace database
         /// <param name="TableName"></param>
         /// <param name="ColumnToSearch"></param>
         /// <returns>the matching DataRow.  If record not found, return null.</returns>
-        private DataRow SearchDatabaseForFirst(string SearchPattern, string TableName, string ColumnToSearch)
+        public static DataRow SearchDatabaseForFirst(string SearchPattern, string TableName, string ColumnToSearch)
         {
             DataSet myEmployees = FillNewDataSet(TableName, "*", pstrDB);
             DataTable employeeTable = myEmployees.Tables[TableName];
@@ -1083,7 +1087,7 @@ namespace database
         /// <param name="TableName"></param>
         /// <param name="ColumnToSearch"></param>
         /// <returns>the matching DataRow.  If record not found, return null.</returns>
-        private bool itemExists(int SearchPattern, int[] intList)
+        public static bool itemExists(int SearchPattern, int[] intList)
         {
             for (int i = 0; i < intList.Length; i++)
             {
@@ -1128,7 +1132,7 @@ namespace database
         /// <param name="TableName"></param>
         /// <param name="ColumnNames"></param>
         /// <param name="databasePath"></param>
-        private void UpdateDatabaseFieldsDated(DataSet DatasetWithFieldsToUpdateFrom, string TableName, string[] ColumnNames, string databasePath)
+        public static void UpdateDatabaseFieldsDated(DataSet DatasetWithFieldsToUpdateFrom, string TableName, string[] ColumnNames, string databasePath)
         {
             OleDbCommand updateCommand = new OleDbCommand();
             updateCommand.Connection = new OleDbConnection(MakeConnectionString(databasePath));
@@ -1159,7 +1163,7 @@ namespace database
         /// <param name="TableName"></param>
         /// <param name="ColumnNames"></param>
         /// <param name="databasePath"></param>
-        private void UpdateDatabaseFields(DataSet DatasetWithFieldsToUpdateFrom, string TableName, string[] ColumnNames, string databasePath)
+        public static void UpdateDatabaseFields(DataSet DatasetWithFieldsToUpdateFrom, string TableName, string[] ColumnNames, string databasePath)
         {
             OleDbCommand updateCommand = new OleDbCommand();
             updateCommand.Connection = new OleDbConnection(MakeConnectionString(databasePath));
@@ -1235,7 +1239,7 @@ namespace database
         /// <param name="TableName"></param>
         /// <param name="UpdateColumns"></param>
         /// <param name="databasePath"></param>
-        private void UpdateDatabaseFields(DataSet DatasetWithFieldsToUpdateFrom, string TableName, string[] IDColumns, string[] UpdateColumns, string databasePath)
+        public static void UpdateDatabaseFields(DataSet DatasetWithFieldsToUpdateFrom, string TableName, string[] IDColumns, string[] UpdateColumns, string databasePath)
         {
             OleDbCommand updateCommand = new OleDbCommand();
             updateCommand.Connection = new OleDbConnection(MakeConnectionString(databasePath));
@@ -1342,6 +1346,87 @@ namespace database
                 updateCommand.ExecuteNonQuery();
             }
             updateCommand.Connection.Close();
+        }
+
+
+        // to be used on SalesLines
+        /// <summary>
+        /// This is a hackish function that accepts a dataset filled in with SalesLines data...  The Price and Extend fields contained within
+        /// the DataSet are updated to the SalesLines DataTable within the master database.mdb
+        /// 
+        /// (to be used on SalesLines table)
+        /// </summary>
+        /// <param name="valuesToUpdate"></param>
+        /// <param name="dbsTableName"></param>
+        public static void UpdateDatabaseFields(DataSet valuesToUpdate, string dbsTableName)
+        {
+            OleDbConnection myConnection = new OleDbConnection(MakeConnectionString(pstrDB));
+            string conString = "SELECT * FROM " + dbsTableName;
+            OleDbDataAdapter myAdapter = new OleDbDataAdapter(conString, myConnection);
+            DataSet DestDataSet = new DataSet();
+
+            #region setup adapter
+
+            // 
+            // oleDbUpdateCommand
+            // 
+            OleDbCommand updateCommand = new OleDbCommand();
+            updateCommand.Connection = myConnection;
+            updateCommand.CommandText = "UPDATE " + dbsTableName + " SET Price = @Price, Extend = @Extend, ProductNotes = @ProductNotes " +
+                "WHERE  Invoice = @Invoice AND Pc = @Pc AND Sku = @Sku AND Qty = @Qty";
+
+            updateCommand.Parameters.Add(new OleDbParameter("@Price", OleDbType.Decimal, 50, "Price"));
+            updateCommand.Parameters.Add(new OleDbParameter("@Extend", OleDbType.Decimal, 50, "Extend"));
+            updateCommand.Parameters.Add(new OleDbParameter("@ProductNotes", OleDbType.VarWChar, 200, "ProductNotes"));
+
+            updateCommand.Parameters.Add(new OleDbParameter("@Invoice", OleDbType.Integer, 50, "Invoice"));
+            updateCommand.Parameters["@Invoice"].SourceVersion = DataRowVersion.Original;
+            updateCommand.Parameters.Add(new OleDbParameter("@Pc", OleDbType.Integer, 50, "Pc"));
+            updateCommand.Parameters["@Pc"].SourceVersion = DataRowVersion.Original;
+            updateCommand.Parameters.Add(new OleDbParameter("@Sku", OleDbType.Integer, 50, "Sku"));
+            updateCommand.Parameters["@Sku"].SourceVersion = DataRowVersion.Original;
+            updateCommand.Parameters.Add(new OleDbParameter("@Qty", OleDbType.Integer, 50, "Qty"));
+            updateCommand.Parameters["@Qty"].SourceVersion = DataRowVersion.Original;
+
+            myAdapter.UpdateCommand = updateCommand;
+            #endregion
+
+            #region query the DataBase for dbsTableName aka  SalesLines
+            myConnection.Open();
+            myAdapter.Fill(DestDataSet, dbsTableName);
+            myConnection.Close();
+            #endregion
+
+            // for every value to be updated
+            for (int l = 0; l < valuesToUpdate.Tables[dbsTableName].Rows.Count; l++)
+            {
+                DataRow valRw = valuesToUpdate.Tables[dbsTableName].Rows[l];
+
+                //  for every row in the database
+                for (int i = 0; i < DestDataSet.Tables[dbsTableName].Rows.Count; i++)
+                {
+                    DataRow destRw = DestDataSet.Tables[dbsTableName].Rows[i];
+
+                    object destInv = destRw["Invoice"];
+                    object srcInv = valRw["Invoice"];
+                    if (destRw["Invoice"].ToString() == valRw["Invoice"].ToString())
+                        if (destRw["Pc"].ToString() == valRw["Pc"].ToString()
+                            && destRw["Sku"].ToString() == valRw["Sku"].ToString()
+                            && destRw["Qty"].ToString() == valRw["Qty"].ToString()
+                            && destRw["Description"].ToString() == valRw["Description"].ToString()
+                            && destRw["Extend"].ToString() == "")
+                        {
+                            //MessageBox.Show("Descriptions match!");
+                            destRw["Price"] = valRw["Price"];
+                            destRw["Extend"] = valRw["Extend"];
+                            destRw["ProductNotes"] = valRw["ProductNotes"];
+                        }
+                }
+            }
+
+            myConnection.Open();
+            myAdapter.Update(DestDataSet, dbsTableName);
+            myConnection.Close();
         }
 
 
@@ -1526,7 +1611,7 @@ namespace database
             return OleDbType.VarWChar;
         }
 
-        private string MakeConnectionString(string dbPath)
+        public static string MakeConnectionString(string dbPath)
         {
             return "Provider=Microsoft.Jet.OLEDB.4.0;Data Source = " + dbPath;
         }
@@ -1567,7 +1652,7 @@ namespace database
         /// <param name="tableName">Name of table to get overlaps regaurding</param>
         /// <param name="colName">The date column... SaleDate</param>
         /// <returns></returns>
-        private int DeleteOverlappingDatesCount(string fil, string tableName, string colName, string pstrDB)
+        public static int DeleteOverlappingDatesCount(string fil, string tableName, string colName, string pstrDB)
         {
             // check date of file
             DateTime[] dateRange = ReadDateSpan(fil,
@@ -1600,7 +1685,7 @@ namespace database
             return numberOfOverlaps;
         }
 
-        private List<DateTime> GetDateRange(DateTime StartingDate, DateTime EndingDate)
+        private static List<DateTime> GetDateRange(DateTime StartingDate, DateTime EndingDate)
         {
             if (StartingDate > EndingDate)
             {
@@ -1649,7 +1734,7 @@ namespace database
 
 
 
-        public reportTypes CheckReportType(FileInfo p)
+        public static reportTypes CheckReportType(FileInfo p)
         {
             string ReportTitle = "";
 
@@ -1798,7 +1883,7 @@ namespace database
 
 
 
-        private DateTime[] ReadDateSpan(string fil, reportTypes reportTypes)
+        private static DateTime[] ReadDateSpan(string fil, reportTypes reportTypes)
         {
             DateTime[] dates = new DateTime[2];
 
@@ -1869,6 +1954,13 @@ namespace database
             return countOfLines;
         }
 
+
+
+
+        public static int[] ConvertDSToIntArray(DataSet invoiceList)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
 
